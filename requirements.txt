@@ -1,0 +1,4 @@
+pandas
+sqlalchemy
+google-genai
+python-dotenv
