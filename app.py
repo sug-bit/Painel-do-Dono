@@ -5,10 +5,9 @@ import streamlit as st
 from google import genai
 from dotenv import load_dotenv
 
-# Carrega variáveis locais
 load_dotenv()
 
-# Configuração da página em modo responsivo amplo
+# Configuração da página
 st.set_page_config(
     page_title="Painel do Dono | Gestão Financeira",
     page_icon="💳",
@@ -16,21 +15,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS leve para cara de aplicativo moderno
+# CSS Dinâmico: Usa cores translúcidas que se adaptam automaticamente ao fundo (Claro ou Escuro)
 st.markdown("""
     <style>
-    .stMetric {
-        background-color: #1e222d;
+    div[data-testid="stMetric"] {
+        background-color: rgba(150, 150, 150, 0.1);
         padding: 15px;
         border-radius: 10px;
-        border: 1px solid #2e3440;
+        border: 1px solid rgba(150, 150, 150, 0.2);
     }
     </style>
 """, unsafe_allow_html=True)
 
 CAMINHO_DB = "data/database.db"
 
-# Função para garantir a existência do banco e carregar os dados
 def obter_conexao():
     if not os.path.exists(CAMINHO_DB):
         os.makedirs("data", exist_ok=True)
@@ -53,10 +51,10 @@ def carregar_dados():
         conn.close()
     return df
 
-# --- NAVEGAÇÃO LATERAL (MENU DE APP) ---
+# --- MENU LATERAL ---
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2830/2830284.png", width=60)
 st.sidebar.title("Painel do Dono")
-st.sidebar.caption("Gestão Financeira & Inteligência Artificial")
+st.sidebar.caption("Gestão Financeira & IA")
 
 menu = st.sidebar.radio(
     "Navegação",
@@ -66,7 +64,7 @@ menu = st.sidebar.radio(
 
 df = carregar_dados()
 
-# --- PÁGINA 1: VISÃO GERAL (DASHBOARD FINTECH) ---
+# --- PÁGINA 1: VISÃO GERAL ---
 if menu == "📊 Visão Geral":
     st.title("📊 Visão Geral do Caixa")
     st.caption("Acompanhamento das entradas, pendências e distribuição de serviços.")
@@ -74,7 +72,6 @@ if menu == "📊 Visão Geral":
     if df.empty:
         st.warning("Nenhum dado encontrado no banco. Cadastre um novo lançamento no menu lateral!")
     else:
-        # Métricas de topo (Cards Estilo Fintech)
         total_pago = df[df['status'] == 'PAGO']['valor'].sum()
         total_atrasado = df[df['status'] == 'ATRASADO']['valor'].sum()
         total_geral = total_pago + total_atrasado
@@ -87,7 +84,6 @@ if menu == "📊 Visão Geral":
 
         st.divider()
 
-        # Gráficos da aplicação
         g1, g2 = st.columns(2)
         with g1:
             st.subheader("📌 Receita por Serviço")
@@ -103,7 +99,7 @@ if menu == "📊 Visão Geral":
         st.subheader("📋 Tabela de Lançamentos Recentes")
         st.dataframe(df, use_container_width=True)
 
-# --- PÁGINA 2: FORMULÁRIO DE CADASTRO ---
+# --- PÁGINA 2: CADASTRO ---
 elif menu == "➕ Cadastrar Pessoa / Lançamento":
     st.title("➕ Adicionar Nova Pessoa / Lançamento")
     st.markdown("Insira novos clientes ou movimentações financeiras diretamente na base do sistema.")
@@ -129,7 +125,6 @@ elif menu == "➕ Cadastrar Pessoa / Lançamento":
         else:
             conn = obter_conexao()
             cursor = conn.cursor()
-            # Insere o novo lançamento na tabela do banco
             cursor.execute("""
                 INSERT INTO fato_financeiro (cliente, servico, valor, status)
                 VALUES (?, ?, ?, ?)
@@ -140,7 +135,7 @@ elif menu == "➕ Cadastrar Pessoa / Lançamento":
             st.success(f"✅ Lançamento para **{cliente_nome}** adicionado com sucesso!")
             st.cache_data.clear()
 
-# --- PÁGINA 3: CONSULTOR GEMINI IA ---
+# --- PÁGINA 3: CONSULTOR IA ---
 elif menu == "🤖 Consultor Gemini IA":
     st.title("🤖 Consultoria Executiva com IA")
     st.markdown("Gere diagnósticos estratégicos baseados em todos os lançamentos cadastrados no sistema.")
@@ -187,14 +182,14 @@ elif menu == "🤖 Consultor Gemini IA":
                     [RELATÓRIO GERADO POR MOTOR ANALÍTICO LOCAL]
                     
                     1. Diagnóstico do Caixa:
-                    - Faturamento liquidado: R$ {total_pago:,.2f}. Operações com saldo positivo.
+                    - Faturamento liquidado: R$ {total_pago:,.2f}.
                     
                     2. Alerta de Risco:
-                    - Total inadimplente: R$ {total_atrasado:,.2f}. Recomenda-se acionar os contratos com pendências.
+                    - Total inadimplente: R$ {total_atrasado:,.2f}.
                     
                     3. Ação Comercial:
-                    - Focar na conversão de novos serviços e na retenção da base atual de clientes.
+                    - Focar na conversão de novos serviços e regularização de pendências.
                     """
 
-                st.success("Relatório gerado!")
+                st.success("Relatório gerado com sucesso!")
                 st.markdown(relatorio)
