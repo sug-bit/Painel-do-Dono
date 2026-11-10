@@ -5,9 +5,10 @@ import streamlit as st
 from google import genai
 from dotenv import load_dotenv
 
+# Tenta carregar o arquivo .env local (se estiver rodando no PC)
 load_dotenv()
 
-# Configuração da página
+# Configuração da página do dashboard
 st.set_page_config(
     page_title="Painel do Dono",
     page_icon="📊",
@@ -17,12 +18,26 @@ st.set_page_config(
 st.title("📊 Painel do Dono - Gestão Inteligente")
 st.markdown("Bem-vindo ao seu painel executivo automatizado com ETL e Inteligência Artificial.")
 
-# Função para carregar os dados do SQLite
+# Função para garantir que o banco de dados exista e carregar os dados
 @st.cache_data
 def carregar_dados():
     caminho_db = "data/database.db"
+    
+    # Se o banco não existir, executa o script de ETL para gerá-lo automaticamente
+    if not os.path.exists(caminho_db):
+        os.makedirs("data", exist_ok=True)
+        try:
+            # Importa e executa a função de ETL para criar a base
+            import sys
+            sys.path.append(os.path.abspath("src"))
+            from ETL import executar_etl
+            executar_etl()
+        except Exception:
+            pass
+            
     if not os.path.exists(caminho_db):
         return None
+        
     conn = sqlite3.connect(caminho_db)
     df = pd.read_sql_query("SELECT * FROM fato_financeiro", conn)
     conn.close()
@@ -30,10 +45,10 @@ def carregar_dados():
 
 df = carregar_dados()
 
-if df is None:
-    st.error("❌ Banco de dados não encontrado! Execute o seu script ETL (`src/ETL.py`) primeiro.")
+if df is None or df.empty:
+    st.error("❌ Banco de dados não encontrado ou vazio! Verifique se os dados brutos e o ETL estão configurados corretamente na pasta src/.")
 else:
-    # Métricas principais no topo (estilo cards de celular/dashboard)
+    # Métricas principais no topo (Cards)
     total_recebido = df[df['status'] == 'PAGO']['valor'].sum()
     total_inadimplente = df[df['status'] == 'ATRASADO']['valor'].sum()
     
@@ -68,15 +83,26 @@ else:
             3. Recomendação Prática de Ação Comercial para hoje
             """
             
-            try:
-                client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=prompt
-                )
-                relatorio = response.text
-            except Exception:
-                # Fallback caso a API esteja com alta demanda
+            # Pega a chave da API (funciona via .env local ou via Secrets do Streamlit Cloud)
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key and hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
+                api_key = st.secrets["GEMINI_API_KEY"]
+                
+            relatorio = None
+            if api_key:
+                client = genai.Client(api_key=api_key)
+                modelos_para_testar = ['gemini-2.5-flash', 'gemini-3.8-flash']
+                for modelo in modelos_para_testar:
+                    try:
+                        res = client.models.generate_content(model=modelo, contents=prompt)
+                        if res and res.text:
+                            relatorio = res.text
+                            break
+                    except Exception:
+                        continue
+            
+            # Fallback inteligente caso a IA esteja temporariamente instável na nuvem
+            if not relatorio:
                 relatorio = f"""
                 [RELATÓRIO GERADO POR MOTOR ANALÍTICO LOCAL - IA OFFLINE]
                 
