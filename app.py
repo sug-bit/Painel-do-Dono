@@ -157,7 +157,7 @@ def consultar_ia(pergunta: str, contexto_dados: str) -> str:
     try:
         client = genai.Client(api_key=api_key)
         prompt = f"Você é um consultor financeiro. Analise:\n{contexto_dados}\nPergunta: {pergunta}\nResponda em português."
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        response = client.models.generate_content(model="gemini-3.8-flash", contents=prompt)
         return response.text
     except Exception as e:
         return f"❌ Erro: {e}"
