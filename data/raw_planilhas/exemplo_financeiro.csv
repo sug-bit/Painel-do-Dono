@@ -1,5 +1,0 @@
-id_transacao,cnpj,valor,status,data_vencimento,servico
-1,12345678000199,1500.50,PAGO,2026-10-01,Consultoria Contábil
-2,98765432000188,800.00,ATRASADO,2026-10-05,Folha de Pagamento
-3,12345678000199,1500.50,PAGO,2026-10-01,Consultoria Contábil
-4,45678912000177,2500.00,PAGO,2026-10-10,Balanço Anual

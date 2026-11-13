@@ -1,8 +1,0 @@
-pandas
-sqlalchemy
-google-genai
-streamlit
-pandas
-plotly
-google-genai
-python-dotenv
