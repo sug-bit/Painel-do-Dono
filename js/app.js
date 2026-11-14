@@ -1,42 +1,31 @@
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 const E=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
 const nf=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}),brl=n=>nf.format(n);
-const kk=n=>n>=1e6?(n/1e6).toFixed(1).replace(".",",")+" mi":n>=1e3?(n/1e3).toFixed(1).replace(".",",")+" mil":String(Math.round(n));
-const k=n=>"R$ "+kk(n),fd=d=>d.split("-").reverse().join("/"),sum=o=>o.pago+o.pendente+o.atrasado;
+const fd=d=>d.split("-").reverse().join("/"),sum=o=>o.pago+o.pendente+o.atrasado;
 const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
 const TD=new Date().toLocaleDateString("sv-SE"),sgn=x=>x.tipo==="saida",P2=n=>String(n).padStart(2,"0");
 const addm=(ym,d)=>{const[y,m]=ym.split("-").map(Number),t=new Date(y,m-1+d,1);return t.getFullYear()+"-"+P2(t.getMonth()+1)};
 
-const LBL={pago:"Pago",pendente:"A receber",atrasado:"Em atraso"},SI={pago:"ok",pendente:"clock",atrasado:"warn"};
-const P={left:'<path d="M15 5l-7 7 7 7"/>',right:'<path d="M9 5l7 7-7 7"/>',home:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',up:'<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',find:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',warn:'<path d="M12 3l10 18H2zM12 10v5M12 18h.01"/>',ok:'<path d="M5 12l5 5 9-10"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',trend:'<path d="M3 17l6-6 4 4 8-9"/>',bank:'<path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/>',sync:'<path d="M21 2v6h-6M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>'};
+const SI={pago:"ok",pendente:"clock",atrasado:"warn"};
+const P={left:'<path d="M15 5l-7 7 7 7"/>',right:'<path d="M9 5l7 7-7 7"/>',home:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',ok:'<path d="M5 12l5 5 9-10"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',trend:'<path d="M3 17l6-6 4 4 8-9"/>',bank:'<path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/>'};
 const ic=(n,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${P[n]}</svg>`;
 
 // ESTADO GLOBAL
-const K="painel-do-dono:v9";
-let S={rows:[], urlNuvem:"", cliente:"", view:"inicio", mes:"", f:"todos", q:"", err:""};
+const K="painel-do-dono:v11";
+let S={rows:[], urlNuvem:"", cliente:"", view:"inicio", mes:"", q:"", err:""};
 try{const j=JSON.parse(localStorage.getItem(K));if(j)Object.assign(S,j)}catch(e){}
 const save=()=>{try{localStorage.setItem(K,JSON.stringify({rows:S.rows,urlNuvem:S.urlNuvem,cliente:S.cliente}))}catch(e){}};
 
-// ==========================================
-// O CÉREBRO HÍBRIDO (LÊ MATRIZ E TABELA PLANA)
-// ==========================================
+// CÉREBRO UNIVERSAL
 function parseSpreadsheetUniversal(json) {
-    const rows = [];
-    let idCounter = 0;
-    const anoAtual = new Date().getFullYear().toString();
-
-    let isMatriz = false;
-    let headerRowIndex = -1;
-    let colunasMeses = {}; 
-
+    const rows = []; let idCounter = 0; const anoAtual = new Date().getFullYear().toString();
+    let isMatriz = false; let headerRowIndex = -1; let colunasMeses = {}; 
     const nomesMeses = {"jan":"01","fev":"02","mar":"03","abr":"04","mai":"05","jun":"06","jul":"07","ago":"08","set":"09","out":"10","nov":"11","dez":"12"};
-
-    // Tenta detectar se é matriz (meses nas colunas)
+    
     for (let i = 0; i < Math.min(15, json.length); i++) {
-        const row = json[i];
         let mesesEncontrados = 0;
-        for (let j = 0; j < row.length; j++) {
-            const cell = norm(String(row[j] || ""));
+        for (let j = 0; j < json[i].length; j++) {
+            const cell = norm(String(json[i][j] || ""));
             for (const [key, val] of Object.entries(nomesMeses)) {
                 if (cell === key || cell.startsWith(key)) { colunasMeses[j] = val; mesesEncontrados++; break; }
             }
@@ -47,8 +36,7 @@ function parseSpreadsheetUniversal(json) {
     if (isMatriz) {
         let currentSection = "Variável";
         for (let i = headerRowIndex + 1; i < json.length; i++) {
-            const row = json[i];
-            if (!row || row.length === 0) continue;
+            const row = json[i]; if (!row || row.length === 0) continue;
             const textoLinha = norm(row.join(" "));
             if (textoLinha.includes("receita")) currentSection = "Receita";
             else if (textoLinha.includes("fixa")) currentSection = "Fixa";
@@ -99,38 +87,36 @@ function parseSpreadsheetUniversal(json) {
     return rows;
 }
 
-// ==========================================
-// SINCRONIZAÇÃO E SETUP
-// ==========================================
+function iso(v){if(typeof v==="number"&&v>20000) return new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10);const s=String(v).trim();const x=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/),z=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(x){let d=+x[1],m=+x[2],y=+x[3];if(y<100)y+=2000;return y+"-"+String(m).padStart(2,"0")+"-"+String(d).padStart(2,"0")}if(z) return z[1]+"-"+z[2]+"-"+z[3];return TD;}
+
+// SINCRONIZAÇÃO
 async function conectarPlanilha(url) {
+    const syncBtn = $("#btn-sync");
     try {
-        // Verifica se o ícone existe antes de tentar animar (evita o erro na tela inicial)
-        const icon = document.getElementById('sync-icon');
-        if (icon) icon.style.animation = 'spin 1s linear infinite';
+        if (syncBtn) syncBtn.classList.add('spin');
+        S.err = "";
         
         const res = await fetch(url + "&nocache=" + Date.now());
         const text = await res.text();
         
-        if (text.includes("<!DOCTYPE html>")) {
-            throw new Error("O link não é um CSV válido. No Google Sheets, vá em 'Arquivo > Compartilhar > Publicar na Web' e escolha o formato CSV.");
-        }
+        if (text.includes("<!DOCTYPE html>")) throw new Error("O link não é CSV. Use Publicar na Web > CSV.");
         
         const wb = XLSX.read(text, {type: 'string'});
         let sheetName = wb.SheetNames.find(n => n.toLowerCase().includes("monique")) || wb.SheetNames[0];
         const json = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header: 1, defval: ""});
         
         const novasRows = parseSpreadsheetUniversal(json);
-        if (novasRows.length === 0) throw new Error("Nenhum dado válido encontrado na planilha.");
+        if (novasRows.length === 0) throw new Error("Nenhum dado válido encontrado.");
 
         S.rows = novasRows;
         S.urlNuvem = url;
         save();
         location.hash = "inicio";
-        
-        if (icon) icon.style.animation = ''; // Remove a animação
     } catch(e) {
-        S.err = "Erro ao conectar: " + e.message;
+        S.err = "Erro: " + e.message;
         render();
+    } finally {
+        if (syncBtn) syncBtn.classList.remove('spin');
     }
 }
 
@@ -138,19 +124,16 @@ function salvarDadosCliente() {
     const nome = $("#inp-cliente").value.trim();
     const url = $("#inp-url").value.trim();
     if(!nome || !url) return alert("Preencha o nome e o link.");
-    
     S.cliente = nome;
     conectarPlanilha(url);
 }
 
-async function atualizarDados() {
-    if(!S.urlNuvem) return alert("Nenhuma planilha conectada.");
-    await conectarPlanilha(S.urlNuvem);
+function atualizarDados() {
+    if(!S.urlNuvem) return;
+    conectarPlanilha(S.urlNuvem);
 }
 
-// ==========================================
-// AGREGAÇÃO DE DADOS E INTERFACE
-// ==========================================
+// AGREGAÇÃO
 function agg(){
     const t={pago:0,pendente:0,atrasado:0},s={...t};
     let fixas=0, variaveis=0, prevencao=0, credito=0, investimento=0;
@@ -174,7 +157,8 @@ function agg(){
     return {t, s, totalReceitas, totalGastos, fixas, variaveis, prevencao, credito, investimento, livre};
 }
 
-const row=x=>{const sg=sgn(x),ab=x.status!=="pago";return `<div class="row"><button class="st ${x.status}" data-pay="${E(x.id)}">${ic(SI[x.status],20)}</button><div class="rb"><div class="m"><b>${E(x.cliente)}</b><small style="color:var(--mute); text-transform: capitalize;">${E(x.nat)}</small></div><div class="r"><b>${sg?"−":""}${brl(x.valor)}</b><small>${fd(x.data)}</small></div></div></div>`};
+// INTERFACE
+const row=x=>{const sg=sgn(x);return `<div class="row"><div class="st ${x.status}">${ic(SI[x.status],20)}</div><div class="rb"><div class="m"><b>${E(x.cliente)}</b><small style="color:var(--mute); text-transform: capitalize;">${E(x.nat)}</small></div><div class="r"><b>${sg?"−":""}${brl(x.valor)}</b><small>${fd(x.data)}</small></div></div></div>`};
 const mbar=()=>{if(!S.rows.length||!["inicio","lancamentos","analises","investimentos"].includes(S.view))return"";const l=S.mes?(t=>t[0].toUpperCase()+t.slice(1))(new Date(+S.mes.slice(0,4),+S.mes.slice(5)-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}).replace(" de "," ")):"Todos os meses";return `<div class="mb"><button data-mv="-1"${S.mes?"":" disabled"}>${ic("left",18)}</button><button class="ml" data-act="todos">${l}</button><button data-mv="1"${S.mes?"":" disabled"}>${ic("right",18)}</button></div>`};
 
 function home(){
@@ -233,52 +217,47 @@ function setup(){
     return `<div class="empty" style="padding-top:20px;">
         <div class="st brand" style="width:64px;height:64px;border-radius:20px;margin-bottom:16px;">${ic("trend",32)}</div>
         <h1 style="margin:0;">Bem-vindo ao Painel</h1>
-        <p style="color:var(--mute); max-width:40ch; margin:10px auto 30px;">Conecte a sua planilha do Google Sheets (formato CSV) para que o aplicativo monte o seu dashboard automaticamente.</p>
+        <p style="color:var(--mute); max-width:45ch; margin:10px auto 30px;">Conecte a sua planilha para que o aplicativo monte o seu dashboard automaticamente.</p>
     </div>
     <div class="panel" style="max-width:500px; margin:0 auto; border-top:4px solid var(--brand);">
         <label class="f">Seu nome ou Empresa</label>
         <input type="text" id="inp-cliente" placeholder="Ex: Monique, Escritório Alpha..." style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-bottom:12px;">
         
         <label class="f">Link da Planilha (Publicar na Web > CSV)</label>
-        <input type="text" id="inp-url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-bottom:16px;">
+        <input type="text" id="inp-url" placeholder="https://docs.google.com/.../pub?output=csv" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink); margin-bottom:12px;">
         
+        <div style="background:var(--chip); padding:12px; border-radius:8px; font-size:13px; color:var(--mute); margin-bottom:16px;">
+            <strong>Dica:</strong> O link CSV permite que o app leia os dados. Você continua editando a planilha normalmente pelo Google Sheets. Quando alterar algo, clique no botão de sincronizar no topo do app.
+        </div>
+
         <button class="btn" onclick="salvarDadosCliente()" style="width:100%; font-size:16px; padding:16px;">🚀 Conectar e Iniciar</button>
         ${S.err?`<p style="color:var(--bad); margin-top:12px; font-size:14px;">${E(S.err)}</p>`:""}
     </div>`;
 }
 
-// ==========================================
-// RENDERIZAÇÃO E ROTEAMENTO
-// ==========================================
 function render(){
     const v=S.view;
-    
-    // Se não tem URL conectada e o usuário não está na tela de setup, força o setup
     if(!S.urlNuvem && v !== "importar") { location.hash = "importar"; return; }
 
-    let h;
-    if(!S.urlNuvem) {
-        h = setup();
-    } else {
-        h = ({inicio:home,lancamentos:list,analises:ana,investimentos:inv,importar:setup})[v]();
-    }
-
+    let h = !S.urlNuvem ? setup() : ({inicio:home,lancamentos:list,analises:ana,investimentos:inv,importar:setup})[v]();
+    
     $("#app").innerHTML = mbar() + h;
     $("#sub").textContent = S.cliente ? `Painel de ${S.cliente}` : "Gestão Financeira";
-    
-    // Esconde o dock se estiver no setup inicial
+    $("#btn-sync").hidden = !S.urlNuvem;
     $("#dock").style.display = S.urlNuvem ? "flex" : "none";
     
     $$(".dock a").forEach(a=>a.classList.toggle("on",a.hash==="#"+v));
     if(v==="lancamentos"&&S.rows.length){paint();$("#q").oninput=e=>{S.q=e.target.value;paint()}}
 }
 
+// EVENTOS GLOBAIS
 document.addEventListener("click",e=>{
-    const p=e.target.closest("[data-pay]"),m=e.target.closest("[data-mv]"),b=e.target.closest("[data-act]");
-    if(p){const x=S.rows.find(y=>y.id===p.dataset.pay);if(x){x.status = x.status==="pago"?"pendente":"pago";save();render()}return}
+    const m=e.target.closest("[data-mv]"),b=e.target.closest("[data-act]");
     if(m){S.mes=addm(S.mes||TD.slice(0,7),+m.dataset.mv);render();return}
     if(b && b.dataset.act==="todos"){if(S.mes)S.mes="";else S.mes=TD.slice(0,7); render();}
 });
+
+$("#btn-sync").onclick = () => { atualizarDados(); };
 
 $("#logo").innerHTML=ic("trend",22);
 $("#dock").innerHTML=[["inicio","home","Início"],["lancamentos","list","Lançamentos"],["analises","chart","Análises"],["investimentos","bank","Investimentos"]].map(([h,i,l])=>`<a href="#${h}">${ic(i,22)}<span>${l}</span></a>`).join("");

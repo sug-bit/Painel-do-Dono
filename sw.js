@@ -1,7 +1,7 @@
 // Service worker: guarda o app no aparelho para abrir mesmo sem internet.
 // Estratégia: tenta a rede primeiro e usa a cópia guardada se estiver offline.
 // Ao mudar arquivos do app, troque o número da versão abaixo.
-const VERSAO = "pdd-v5";
+const VERSAO = "pdd-v12";
 const BASE = ["./", "index.html", "css/style.css", "js/captura.js","js/app.js", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", e => {
