@@ -34,6 +34,7 @@ python -m http.server 5500
 painel-do-dono/
 ├── index.html               # casca da página: cabeçalho, área principal, barra flutuante
 ├── css/style.css            # todo o visual (tokens de cor no :root, tema claro e escuro)
+├── js/captura.js            # lê texto de notificação de Pix e cartão
 ├── js/app.js                # toda a lógica
 ├── manifest.webmanifest     # nome, cores e ícones do app instalável
 ├── sw.js                    # service worker: abre sem internet depois da primeira visita
