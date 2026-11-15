@@ -1,0 +1,7 @@
+{
+  "name": "painel-do-dono",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Painel do Dono: controle financeiro em PWA, sem back-end.",
+  "scripts": { "test": "node --test tests/dados.test.js", "start": "python -m http.server 5500" }
+}
